@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>極驗設備指紋測試</title>
+  <!-- 引入 Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入 Prism.js 進行 JSON 語法高亮 -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-dark.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <!-- 引入極驗設備指紋 SDK -->
+  <script src="https://static.geetest.com/g5/gd.js"></script>
+  <style>
+    /* 自定義 Prism.js 樣式 */
+    pre[class*="language-"] {
+      border-radius: 0.5rem;
+      padding: 1rem;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      max-height: 400px;
+      overflow-y: auto;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    /* 響應式設計 */
+    @media (max-width: 640px) {
+      .container {
+        padding: 1rem;
+      }
+      input, select, button {
+        font-size: 0.9rem;
+      }
+    }
+    /* 複製按鈕提示動畫 */
+    #copy-feedback {
+      transition: opacity 0.3s ease;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 font-sans">
+<div class="container max-w-3xl mx-auto p-4 sm:p-6">
+  <h1 class="text-3xl font-bold text-gray-900 mb-6 text-center">極驗設備指紋測試</h1>
+  <form id="geetest-form" class="bg-white p-6 rounded-lg shadow-lg">
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label for="app_id" class="block text-sm font-medium text-gray-700 mb-1">Geetest App ID</label>
+        <input type="text" id="app_id" value="pfjyp2ksljcwirvxarassaztbigvd4gp" class="block w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" required>
+      </div>
+      <div>
+        <label for="user_ip" class="block text-sm font-medium text-gray-700 mb-1">用戶 IP（IPv4，如 117.136.52.227）</label>
+        <input type="text" id="user_ip" value="117.136.52.227" pattern="\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}" class="block w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" required>
+        <p class="text-xs text-gray-500 mt-1">請輸入有效的 IPv4 地址</p>
+      </div>
+    </div>
+    <div class="mt-4">
+      <label for="scene" class="block text-sm font-medium text-gray-700 mb-1">業務場景</label>
+      <select id="scene" class="block w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+        <option value="login">登錄</option>
+        <option value="sign_up">註冊</option>
+        <option value="activity" selected>活動</option>
+      </select>
+    </div>
+    <div class="mt-4">
+      <label class="flex items-center">
+        <input type="checkbox" id="include_user_id" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+        <span class="ml-2 text-sm font-medium text-gray-700">提供用戶 ID 和標識類型（選填）</span>
+      </label>
+    </div>
+    <div id="user_id_fields" class="hidden mt-4 grid gap-4 sm:grid-cols-2">
+      <div>
+        <label for="user_id" class="block text-sm font-medium text-gray-700 mb-1">用戶 ID（如手機號）</label>
+        <input type="text" id="user_id" value="11500066894" class="block w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+      </div>
+      <div>
+        <label for="user_id_type" class="block text-sm font-medium text-gray-700 mb-1">用戶標識類型</label>
+        <select id="user_id_type" class="block w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+          <option value="2" selected>手機號 (2)</option>
+          <option value="102">MD5手機號 (102)</option>
+          <option value="3">QQ OpenID (3)</option>
+          <option value="4">Wechat OpenID (4)</option>
+        </select>
+      </div>
+    </div>
+    <button type="submit" class="mt-6 w-full bg-indigo-600 text-white p-3 rounded-md hover:bg-indigo-700 transition">生成設備指紋</button>
+  </form>
+  <div class="mt-6">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="text-lg font-semibold text-gray-800">生成結果</h2>
+      <div>
+        <span id="copy-feedback" class="text-sm text-green-600 opacity-0 mr-2">已複製！</span>
+        <button id="copy-button" class="bg-gray-600 text-white px-3 py-1 rounded-md hover:bg-gray-700 transition">複製 JSON</button>
+      </div>
+    </div>
+    <pre id="result" class="language-json">{
+  "message": "結果將顯示在這裡..."
+}</pre>
+  </div>
+</div>
+
+<script>
+  // 控制 user_id 和 user_id_type 字段顯示
+  document.getElementById("include_user_id").addEventListener("change", function() {
+    document.getElementById("user_id_fields").classList.toggle("hidden", !this.checked);
+  });
+
+  // 表單提交事件
+  document.getElementById("geetest-form").addEventListener("submit", function(event) {
+    event.preventDefault();
+    const resultDiv = document.getElementById("result");
+    resultDiv.textContent = JSON.stringify({ message: "正在生成設備指紋..." }, null, 2);
+    Prism.highlightElement(resultDiv);
+
+    // 初始化極驗設備指紋 SDK
+    initGeeGuard({
+      appId: document.getElementById("app_id").value,
+      protocol: "https://",
+      networkTimeout: 10000
+    }, function(data) {
+      if (data.status === "success") {
+        // 構造 JSON 數據
+        const requestData = {
+          geeToken: data.data.gee_token,
+          userIp: document.getElementById("user_ip").value,
+          opTimestamp: Math.floor(Date.now() / 1000),
+          scene: document.getElementById("scene").value
+        };
+
+        // 如果勾選了提供用戶 ID，添加 userId 和 userIdType
+        if (document.getElementById("include_user_id").checked) {
+          requestData.userId = document.getElementById("user_id").value;
+          requestData.userIdType = parseInt(document.getElementById("user_id_type").value);
+        }
+
+        // 顯示 JSON
+        resultDiv.textContent = JSON.stringify(requestData, null, 2);
+        Prism.highlightElement(resultDiv);
+      } else {
+        // 顯示錯誤
+        resultDiv.textContent = JSON.stringify({
+          status: "error",
+          message: data.data.msg,
+          code: data.data.code
+        }, null, 2);
+        Prism.highlightElement(resultDiv);
+      }
+    });
+  });
+
+  // 複製 JSON 按鈕事件
+  document.getElementById("copy-button").addEventListener("click", function() {
+    const resultDiv = document.getElementById("result");
+    const textToCopy = resultDiv.textContent;
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      const feedback = document.getElementById("copy-feedback");
+      feedback.classList.remove("opacity-0");
+      setTimeout(() => feedback.classList.add("opacity-0"), 2000);
+    }).catch(err => {
+      alert("複製失敗: " + err);
+    });
+  });
+</script>
+</body>
+</html>
